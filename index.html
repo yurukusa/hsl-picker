@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HSL Picker — HSL Color Picker & Harmony Generator</title>
+<meta name="description" content="Pick colors in HSL space. See harmonies, lightness scales, convert to HEX/RGB. Copy any format.">
+<meta property="og:title" content="HSL Picker — HSL Color Picker & Harmony Generator">
+<meta property="og:description" content="Pick colors in HSL space. See harmonies, lightness scales, convert to HEX/RGB. Copy any format.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://yurukusa.github.io/hsl-picker/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="HSL Picker — HSL Color Picker & Harmony Generator">
+<meta name="twitter:description" content="Pick colors in HSL space. See harmonies, lightness scales, convert to HEX/RGB. Copy any format.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+h1{font-size:1.5rem;font-weight:600}
+h2{font-size:1rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem}
+.container{max-width:900px;margin:0 auto;padding:1.5rem;width:100%;flex:1}
+header{text-align:center;margin-bottom:2rem}
+header p{color:var(--text2);margin-top:.25rem;font-size:.9rem}
+
+/* Sliders */
+.picker-section{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.25rem;margin-bottom:1.25rem}
+.slider-group{margin-bottom:1rem}
+.slider-group:last-child{margin-bottom:0}
+.slider-label{display:flex;justify-content:space-between;margin-bottom:.4rem;font-size:.85rem}
+.slider-label span:first-child{color:var(--text2)}
+.slider-label span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
+.slider-track{position:relative;height:28px;border-radius:6px;cursor:pointer;border:1px solid var(--border)}
+.slider-thumb{position:absolute;top:-2px;width:14px;height:32px;border-radius:4px;background:#fff;border:2px solid var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.5);transform:translateX(-50%);pointer-events:none}
+
+/* Hue gradient */
+#hueTrack{background:linear-gradient(to right,hsl(0,100%,50%),hsl(30,100%,50%),hsl(60,100%,50%),hsl(90,100%,50%),hsl(120,100%,50%),hsl(150,100%,50%),hsl(180,100%,50%),hsl(210,100%,50%),hsl(240,100%,50%),hsl(270,100%,50%),hsl(300,100%,50%),hsl(330,100%,50%),hsl(360,100%,50%))}
+
+/* Preview + outputs layout */
+.preview-outputs{display:grid;grid-template-columns:200px 1fr;gap:1.25rem;margin-bottom:1.25rem}
+@media(max-width:600px){.preview-outputs{grid-template-columns:1fr}}
+.preview-box{width:200px;height:200px;border-radius:8px;border:1px solid var(--border);background:var(--surface)}
+@media(max-width:600px){.preview-box{width:100%;height:160px}}
+
+/* Output rows */
+.outputs{display:flex;flex-direction:column;gap:.5rem;justify-content:center}
+.output-row{display:flex;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;cursor:pointer;transition:border-color .15s}
+.output-row:hover{border-color:var(--accent)}
+.output-label{font-size:.7rem;color:var(--text2);text-transform:uppercase;min-width:36px;flex-shrink:0}
+.output-value{font-family:'SF Mono',SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;font-size:.82rem;flex:1;word-break:break-all}
+.copy-hint{font-size:.65rem;color:var(--text2);opacity:0;transition:opacity .15s}
+.output-row:hover .copy-hint{opacity:1}
+.copied{color:var(--green)!important;font-weight:600}
+
+/* Harmonies */
+.harmonies{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.25rem}
+.harmony-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem}
+.harmony-card h3{font-size:.8rem;color:var(--text2);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.04em}
+.harmony-swatches{display:flex;gap:.4rem;flex-wrap:wrap}
+.harmony-swatch{width:40px;height:40px;border-radius:6px;cursor:pointer;border:1px solid var(--border);transition:transform .1s}
+.harmony-swatch:hover{transform:scale(1.15)}
+.harmony-hex{font-size:.6rem;color:var(--text2);text-align:center;margin-top:.2rem;font-family:monospace}
+
+/* Scales */
+.scale-section{margin-bottom:1.25rem}
+.scale-row{display:flex;gap:3px;margin-top:.4rem}
+.scale-swatch{flex:1;height:44px;border-radius:4px;cursor:pointer;border:1px solid var(--border);position:relative;transition:transform .1s}
+.scale-swatch:hover{transform:scaleY(1.2);z-index:1}
+.scale-swatch span{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:.55rem;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8);white-space:nowrap}
+
+/* Presets */
+.presets{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.25rem}
+.preset{width:40px;height:40px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .1s}
+.preset:hover{border-color:var(--accent);transform:scale(1.1)}
+
+/* Recent */
+.recent-section{margin-bottom:1.25rem}
+.recent-colors{display:flex;flex-wrap:wrap;gap:.4rem}
+.recent-swatch{width:36px;height:36px;border-radius:6px;cursor:pointer;border:1px solid var(--border);transition:transform .1s}
+.recent-swatch:hover{transform:scale(1.1)}
+.empty-msg{color:var(--text2);font-size:.8rem;font-style:italic}
+
+footer{text-align:center;padding:1.5rem;color:var(--text2);font-size:.85rem;border-top:1px solid var(--border)}
+footer a{color:var(--accent);text-decoration:none}
+footer a:hover{text-decoration:underline}
+
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(60px);background:var(--green);color:var(--bg);padding:.5rem 1.25rem;border-radius:6px;font-size:.85rem;font-weight:600;opacity:0;transition:all .25s ease;pointer-events:none;z-index:100}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>HSL Picker</h1>
+    <p>Pick colors in HSL space. See harmonies, lightness scales, convert to HEX/RGB.</p>
+  </header>
+
+  <!-- Sliders -->
+  <div class="picker-section">
+    <div class="slider-group">
+      <div class="slider-label"><span>Hue</span><span id="hueVal">210</span></div>
+      <div class="slider-track" id="hueTrack"><div class="slider-thumb" id="hueThumb"></div></div>
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>Saturation</span><span id="satVal">80%</span></div>
+      <div class="slider-track" id="satTrack"><div class="slider-thumb" id="satThumb"></div></div>
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>Lightness</span><span id="ligVal">50%</span></div>
+      <div class="slider-track" id="ligTrack"><div class="slider-thumb" id="ligThumb"></div></div>
+    </div>
+    <div class="slider-group">
+      <div class="slider-label"><span>Alpha</span><span id="alpVal">1</span></div>
+      <div class="slider-track" id="alpTrack"><div class="slider-thumb" id="alpThumb"></div></div>
+    </div>
+  </div>
+
+  <!-- Preview + Outputs -->
+  <div class="preview-outputs">
+    <div class="preview-box" id="preview"></div>
+    <div class="outputs" id="outputs"></div>
+  </div>
+
+  <!-- Presets -->
+  <div class="picker-section">
+    <h2>Presets</h2>
+    <div class="presets" id="presets"></div>
+  </div>
+
+  <!-- Harmonies -->
+  <div class="picker-section">
+    <h2>Color Harmonies</h2>
+    <div class="harmonies" id="harmonies"></div>
+  </div>
+
+  <!-- Lightness Scale -->
+  <div class="picker-section scale-section">
+    <h2>Lightness Scale</h2>
+    <div class="scale-row" id="lightnessScale"></div>
+  </div>
+
+  <!-- Saturation Scale -->
+  <div class="picker-section scale-section">
+    <h2>Saturation Scale</h2>
+    <div class="scale-row" id="saturationScale"></div>
+  </div>
+
+  <!-- Recent -->
+  <div class="picker-section recent-section">
+    <h2>Recent Colors</h2>
+    <div class="recent-colors" id="recentColors"><span class="empty-msg">No recent colors yet</span></div>
+  </div>
+</div>
+
+<footer>
+  <a href="https://yurukusa.github.io/dev-toolkit/">Dev Toolkit</a> — 76+ free browser-based developer tools
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  let H=210, S=80, L=50, A=1;
+
+  const $=id=>document.getElementById(id);
+  const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+
+  // --- Slider logic ---
+  function setupSlider(trackId,thumbId,min,max,step,getValue,setValue){
+    const track=$(trackId), thumb=$(thumbId);
+    let dragging=false;
+    function pos(e){
+      const r=track.getBoundingClientRect();
+      const x=(e.touches?e.touches[0]:e).clientX;
+      let pct=clamp((x-r.left)/r.width,0,1);
+      let val=min+pct*(max-min);
+      if(step<1) val=Math.round(val*100)/100; else val=Math.round(val/step)*step;
+      return clamp(val,min,max);
+    }
+    function onMove(e){if(!dragging)return;e.preventDefault();setValue(pos(e));update();}
+    function onUp(){dragging=false;saveRecent();}
+    track.addEventListener('mousedown',e=>{dragging=true;setValue(pos(e));update();});
+    track.addEventListener('touchstart',e=>{dragging=true;setValue(pos(e));update();},{passive:false});
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('touchmove',onMove,{passive:false});
+    document.addEventListener('mouseup',onUp);
+    document.addEventListener('touchend',onUp);
+    return function syncThumb(){
+      const pct=(getValue()-min)/(max-min);
+      thumb.style.left=(pct*100)+'%';
+    };
+  }
+
+  const syncHue=setupSlider('hueTrack','hueThumb',0,360,1,()=>H,v=>H=v);
+  const syncSat=setupSlider('satTrack','satThumb',0,100,1,()=>S,v=>S=v);
+  const syncLig=setupSlider('ligTrack','ligThumb',0,100,1,()=>L,v=>L=v);
+  const syncAlp=setupSlider('alpTrack','alpThumb',0,1,0.01,()=>A,v=>A=v);
+
+  // --- Color conversion ---
+  function hslToRgb(h,s,l){
+    s/=100;l/=100;
+    const k=n=>(n+h/30)%12;
+    const a=s*Math.min(l,1-l);
+    const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+    return[Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];
+  }
+  function rgbToHex(r,g,b){return'#'+[r,g,b].map(c=>c.toString(16).padStart(2,'0')).join('');}
+  function hexForHsl(h,s,l){const[r,g,b]=hslToRgb(h,s,l);return rgbToHex(r,g,b);}
+
+  // --- Toast ---
+  let toastTimer;
+  function showToast(msg){
+    const t=$('toast');t.textContent=msg;t.classList.add('show');
+    clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),1500);
+  }
+  function copyText(text){navigator.clipboard.writeText(text).then(()=>showToast('Copied: '+text));}
+
+  // --- Outputs ---
+  function renderOutputs(){
+    const[r,g,b]=hslToRgb(H,S,L);
+    const hex=rgbToHex(r,g,b);
+    const rows=[
+      ['HSL',`hsl(${H}, ${S}%, ${L}%)`],
+      ['HSLA',`hsla(${H}, ${S}%, ${L}%, ${A})`],
+      ['HEX',hex],
+      ['RGB',`rgb(${r}, ${g}, ${b})`],
+      ['CSS',`--color-primary: ${hex};`],
+    ];
+    $('outputs').innerHTML=rows.map(([label,value])=>
+      `<div class="output-row" onclick="this.querySelector('.copy-hint').textContent='Copied!';this.querySelector('.copy-hint').classList.add('copied');setTimeout(()=>{this.querySelector('.copy-hint').textContent='Click to copy';this.querySelector('.copy-hint').classList.remove('copied')},1200);" data-copy="${value.replace(/"/g,'&quot;')}">
+        <span class="output-label">${label}</span>
+        <span class="output-value">${value}</span>
+        <span class="copy-hint">Click to copy</span>
+      </div>`
+    ).join('');
+    $('outputs').querySelectorAll('.output-row').forEach(row=>{
+      row.addEventListener('click',()=>copyText(row.dataset.copy));
+    });
+  }
+
+  // --- Slider gradients ---
+  function updateSliderGradients(){
+    $('satTrack').style.background=`linear-gradient(to right,hsl(${H},0%,${L}%),hsl(${H},100%,${L}%))`;
+    $('ligTrack').style.background=`linear-gradient(to right,hsl(${H},${S}%,0%),hsl(${H},${S}%,50%),hsl(${H},${S}%,100%))`;
+    const c1=`hsla(${H},${S}%,${L}%,0)`,c2=`hsla(${H},${S}%,${L}%,1)`;
+    $('alpTrack').style.background=`linear-gradient(to right,${c1},${c2}),repeating-conic-gradient(#808080 0% 25%,#fff 0% 50%) 0 0/12px 12px`;
+  }
+
+  // --- Harmonies ---
+  function renderHarmonies(){
+    const hWrap=h=>((h%360)+360)%360;
+    const groups=[
+      {name:'Complementary',hues:[H,hWrap(H+180)]},
+      {name:'Analogous',hues:[hWrap(H-30),H,hWrap(H+30)]},
+      {name:'Triadic',hues:[H,hWrap(H+120),hWrap(H+240)]},
+      {name:'Split-Comp',hues:[H,hWrap(H+150),hWrap(H+210)]},
+    ];
+    $('harmonies').innerHTML=groups.map(g=>{
+      const swatches=g.hues.map(hue=>{
+        const hex=hexForHsl(hue,S,L);
+        return`<div><div class="harmony-swatch" style="background:${hex}" data-h="${hue}" data-s="${S}" data-l="${L}" title="${hex}"></div><div class="harmony-hex">${hex}</div></div>`;
+      }).join('');
+      return`<div class="harmony-card"><h3>${g.name}</h3><div class="harmony-swatches">${swatches}</div></div>`;
+    }).join('');
+    $('harmonies').querySelectorAll('.harmony-swatch').forEach(sw=>{
+      sw.addEventListener('click',()=>{
+        H=parseInt(sw.dataset.h);S=parseInt(sw.dataset.s);L=parseInt(sw.dataset.l);
+        update();saveRecent();
+      });
+    });
+  }
+
+  // --- Scales ---
+  function renderScales(){
+    // Lightness
+    let lHtml='';
+    for(let l=10;l<=90;l+=10){
+      const hex=hexForHsl(H,S,l);
+      lHtml+=`<div class="scale-swatch" style="background:${hex}" data-h="${H}" data-s="${S}" data-l="${l}" title="${l}%"><span>${l}%</span></div>`;
+    }
+    $('lightnessScale').innerHTML=lHtml;
+    // Saturation
+    let sHtml='';
+    for(let s=10;s<=100;s+=10){
+      const hex=hexForHsl(H,s,L);
+      sHtml+=`<div class="scale-swatch" style="background:${hex}" data-h="${H}" data-s="${s}" data-l="${L}" title="${s}%"><span>${s}%</span></div>`;
+    }
+    $('saturationScale').innerHTML=sHtml;
+    // Click handlers
+    document.querySelectorAll('.scale-swatch').forEach(sw=>{
+      sw.addEventListener('click',()=>{
+        H=parseInt(sw.dataset.h);S=parseInt(sw.dataset.s);L=parseInt(sw.dataset.l);
+        update();saveRecent();
+      });
+    });
+  }
+
+  // --- Presets ---
+  const presetColors=[
+    {h:210,s:100,l:50,name:'Primary Blue'},
+    {h:130,s:60,l:44,name:'Success Green'},
+    {h:0,s:90,l:58,name:'Danger Red'},
+    {h:40,s:80,l:50,name:'Warning Yellow'},
+    {h:270,s:60,l:55,name:'Purple'},
+    {h:180,s:60,l:45,name:'Teal'},
+    {h:320,s:70,l:55,name:'Pink'},
+    {h:20,s:90,l:55,name:'Orange'},
+    {h:200,s:20,l:50,name:'Slate'},
+    {h:60,s:70,l:50,name:'Lime'},
+    {h:240,s:50,l:60,name:'Indigo'},
+    {h:0,s:0,l:40,name:'Gray'},
+  ];
+  function renderPresets(){
+    $('presets').innerHTML=presetColors.map(c=>{
+      const hex=hexForHsl(c.h,c.s,c.l);
+      return`<div class="preset" style="background:${hex}" title="${c.name}" data-h="${c.h}" data-s="${c.s}" data-l="${c.l}"></div>`;
+    }).join('');
+    $('presets').querySelectorAll('.preset').forEach(p=>{
+      p.addEventListener('click',()=>{
+        H=parseInt(p.dataset.h);S=parseInt(p.dataset.s);L=parseInt(p.dataset.l);
+        update();saveRecent();
+      });
+    });
+  }
+
+  // --- Recent colors ---
+  const RECENT_KEY='hsl-picker-recent';
+  function loadRecent(){try{return JSON.parse(localStorage.getItem(RECENT_KEY))||[];}catch{return[];}}
+  function saveRecent(){
+    let rec=loadRecent();
+    const key=`${H},${S},${L}`;
+    rec=rec.filter(r=>r!==key);
+    rec.unshift(key);
+    if(rec.length>12)rec=rec.slice(0,12);
+    localStorage.setItem(RECENT_KEY,JSON.stringify(rec));
+    renderRecent();
+  }
+  function renderRecent(){
+    const rec=loadRecent();
+    if(!rec.length){$('recentColors').innerHTML='<span class="empty-msg">No recent colors yet</span>';return;}
+    $('recentColors').innerHTML=rec.map(r=>{
+      const[h,s,l]=r.split(',').map(Number);
+      const hex=hexForHsl(h,s,l);
+      return`<div class="recent-swatch" style="background:${hex}" title="${hex}" data-h="${h}" data-s="${s}" data-l="${l}"></div>`;
+    }).join('');
+    $('recentColors').querySelectorAll('.recent-swatch').forEach(sw=>{
+      sw.addEventListener('click',()=>{
+        H=parseInt(sw.dataset.h);S=parseInt(sw.dataset.s);L=parseInt(sw.dataset.l);
+        update();
+      });
+    });
+  }
+
+  // --- Main update ---
+  function update(){
+    $('hueVal').textContent=H;
+    $('satVal').textContent=S+'%';
+    $('ligVal').textContent=L+'%';
+    $('alpVal').textContent=A;
+    syncHue();syncSat();syncLig();syncAlp();
+    $('preview').style.background=`hsla(${H},${S}%,${L}%,${A})`;
+    updateSliderGradients();
+    renderOutputs();
+    renderHarmonies();
+    renderScales();
+  }
+
+  renderPresets();
+  renderRecent();
+  update();
+})();
+</script>
+</body>
+</html>
